@@ -1,5 +1,4 @@
 """Bu yazılım Needleman-Wunsch algoritmasını kullanarak iki dizinin benzerliğini hesaplar."""
-
 class NeedlemanWunsch:
     def __init__(self, seq1, seq2, match=5, mismatch=-1, gap_vertical=-2, gap_horizontal=-3):
         """
@@ -16,23 +15,28 @@ class NeedlemanWunsch:
         self.seq2 = seq2.upper()
         
         # Uzun diziyi dikey (seq2) ve yatay (seq1) olarak hizala
-        if len(seq1) >= len(seq2):
+        if len(seq1) > len(seq2):
             self.seq1 = seq2  # yatay (kısa)
             self.seq2 = seq1  # dikey (uzun)
             self.swapped = True
 
-            self.gap_vertical = gap_horizontal # UNUTMA PUANLARIN DA YERLERİNİ DEĞİŞTİR
-            self.gap_horizontal = gap_vertical
+            # DÜZELTME: Diziler swap edildiğinde gap puanları da swap edilmeli
+            # Ama gap_seq1 ve gap_seq2 olarak saklanmalı (hangi dizide gap olduğunu belirtir)
+            self.gap_seq1 = gap_vertical   # seq1 (artık yatay olan) için gap puanı
+            self.gap_seq2 = gap_horizontal  # seq2 (artık dikey olan) için gap puanı
 
         else:
             self.seq1 = seq1  # Yatay
             self.seq2 = seq2  # Dikey
             self.swapped = False
 
+            self.gap_seq1 = gap_horizontal  # seq1 için gap puanı
+            self.gap_seq2 = gap_vertical    # seq2 için gap puanı
+
+
         self.match_score = match
         self.mismatch_score = mismatch
-        self.gap_vertical = gap_vertical
-        self.gap_horizontal = gap_horizontal
+        
 
         # Matris boyutları 
         self.rows = len(self.seq2) + 1  # uzun dizi (dikey)
@@ -54,24 +58,24 @@ class NeedlemanWunsch:
     
     def matris_olustur(self):
         """İlk satır ve sütunu doldur, sonra tüm matrisi doldur"""
-        # İlk satırı doldur (yatay gap'ler)
+        # İlk satırı doldur (yatay gap'ler - seq1'de gap)
         for j in range(1, self.cols):
             """
             j sütun indeksimiz ve 0. satırdayız, sağa doğru ilerlemek istiyoruz.
             aradığımız kutu (0, j) koordinatındaki kutu.
             bir önceki kutudaki (0, j-1) kutu ile gap puanımıza atadığımız puanı topluyoruz
             """
-            self.score_matrix[0][j] = self.score_matrix[0][j-1] + self.gap_horizontal
+            self.score_matrix[0][j] = self.score_matrix[0][j-1] + self.gap_seq1
             self.direction_matrix[0][j] = "←"  # sonradan geri dönüş için yön önemli
 
-        # İlk sütunu doldur (dikey gap'ler)
+        # İlk sütunu doldur (dikey gap'ler - seq2'de gap)
         for i in range(1, self.rows):
             """
             i satır indeksimiz ve 0. sütundayız, aşağı doğru ilerlemek istiyoruz.
             aradığımız kutu (i, 0) koordinatındaki kutu.
             bir önceki kutudaki (i-1, 0) kutu ile gap puanımıza atadığımız puanı topluyoruz
             """
-            self.score_matrix[i][0] = self.score_matrix[i-1][0] + self.gap_vertical
+            self.score_matrix[i][0] = self.score_matrix[i-1][0] + self.gap_seq2
             self.direction_matrix[i][0] = "↑"  # sonradan geri dönüş için yön önemli
 
         # Şuana kadar boş bir matris oluşturduk ve ilk satır ve sütun için puanlama yaptık
@@ -89,8 +93,8 @@ class NeedlemanWunsch:
                 else:
                     diagonal_score = self.score_matrix[i-1][j-1] + self.mismatch_score
 
-                vertical_score = self.score_matrix[i-1][j] + self.gap_vertical  # yukarıdan gelme
-                horizontal_score = self.score_matrix[i][j-1] + self.gap_horizontal  # soldan gelme
+                vertical_score = self.score_matrix[i-1][j] + self.gap_seq2  # yukarıdan gelme (seq2'de gap)
+                horizontal_score = self.score_matrix[i][j-1] + self.gap_seq1  # soldan gelme (seq1'de gap)
 
                 # En yüksek puanı seç
                 max_score = max(diagonal_score, vertical_score, horizontal_score)
@@ -159,13 +163,13 @@ class NeedlemanWunsch:
                 i -= 1
                 j -= 1
                 
-            elif direction == '↑':  # Yukarı - seq1'de gap
+            elif direction == '↑':  # Yukarı - seq1'de gap (dikey hareket, seq2'den harf al)
                 aligned_seq1.append('-')
                 aligned_seq2.append(self.seq2[i-1])
                 alignment.append(' ')
                 i -= 1
                 
-            elif direction == '←':  # Sol - seq2'de gap
+            elif direction == '←':  # Sol - seq2'de gap (yatay hareket, seq1'den harf al)
                 aligned_seq1.append(self.seq1[j-1])
                 aligned_seq2.append('-')
                 alignment.append(' ')
@@ -201,6 +205,9 @@ class NeedlemanWunsch:
         print(f"Benzerlik oranı: {match_count/total_length*100:.2f}%")
         print()
 
+    
+
+
     def calistir(self):
         """Tüm adımları sırayla çalıştır"""
         self.dizileri_goster()
@@ -215,8 +222,8 @@ class NeedlemanWunsch:
 # MAIN BLOK
 if __name__ == "__main__":
     # Örnek DNA dizileri
-    seq1 = "ATGCGTATCGATT"  # Bu değişecek (üstteki tablo)
-    seq2 = "ATGCGTATCGATTCGA"  # Bu değişecek (alttaki tablo)
+    seq1 = "GATTACAG"  # Bu değişecek (üstteki tablo)
+    seq2 = "GATTCGAG"  # Bu değişecek (alttaki tablo)
     
     print("NEEDLEMAN-WUNSCH ALGORİTMASI")
     print("=" * 60)
